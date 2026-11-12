@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --surface-2: #f1f1f4;
+  --border: #e4e4e9;
+  --fg: #16161d;
+  --muted: #6b6b78;
+  --accent: #4f46e5;
+  --accent-fg: #ffffff;
+  --accent-soft: #eef0ff;
+  --danger: #dc2626;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0d0d12;
+  --surface: #16161e;
+  --surface-2: #1e1e28;
+  --border: #2a2a36;
+  --fg: #ececf1;
+  --muted: #9a9aa8;
+  --accent: #818cf8;
+  --accent-fg: #0d0d12;
+  --accent-soft: #23243d;
+  --danger: #f87171;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Felles komponentklasser */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-accent-fg hover:opacity-90;
+}
+@utility btn-secondary {
+  @apply btn border border-border bg-surface text-fg hover:bg-surface-2;
+}
+@utility btn-ghost {
+  @apply btn text-muted hover:bg-surface-2 hover:text-fg;
+}
+@utility btn-danger {
+  @apply btn border border-border bg-surface text-danger hover:bg-surface-2;
+}
+@utility input {
+  @apply w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base text-fg placeholder:text-muted outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/25 sm:text-sm;
+}
+@utility label {
+  @apply mb-1.5 block text-sm font-medium text-fg;
+}
+@utility card {
+  @apply rounded-2xl border border-border bg-surface;
+}
+@utility kbd {
+  @apply rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-muted;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
