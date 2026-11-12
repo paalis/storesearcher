@@ -9,6 +9,7 @@ interface Rule {
 
 const robotsCache = new TtlCache<Rule[]>(60 * 60 * 1000, 300);
 const AGENT_TOKEN = "butikkbrowser";
+const DISALLOW_ALL: Rule[] = [{ allow: false, pattern: "/" }];
 
 /** Parser robots.txt og returnerer reglene som gjelder for oss (vår agent eller *). */
 export function parseRobots(text: string): Rule[] {
@@ -65,18 +66,31 @@ export function isAllowed(rules: Rule[], pathAndQuery: string): boolean {
   return best ? best.allow : true;
 }
 
+export type RobotsVerdict = "tillatt" | "sperret" | "utilgjengelig";
+
 export async function robotsAllows(url: string, signal?: AbortSignal): Promise<boolean> {
+  return (await robotsVerdict(url, signal)) === "tillatt";
+}
+
+/** Skiller mellom «robots.txt sier nei» og «robots.txt kunne ikke leses». */
+export async function robotsVerdict(url: string, signal?: AbortSignal): Promise<RobotsVerdict> {
   const u = new URL(url);
   let rules = robotsCache.get(u.origin);
   if (!rules) {
+    // Som Google: 2xx = følg reglene, 4xx = ingen regler,
+    // 5xx/429/nettverksfeil = alt sperret (caches kort, så vi prøver igjen snart)
     try {
       const res = await safeFetch(`${u.origin}/robots.txt`, { timeoutMs: 3000, maxBytes: 500_000, accept: "text/plain", signal });
-      // 4xx = ingen restriksjoner; 5xx = vær forsiktig og anta tillatt bare søkesiden ikke er eksplisitt nektet
-      rules = res.status >= 200 && res.status < 300 ? parseRobots(res.body) : [];
-    } catch {
-      rules = [];
+      if (res.status >= 200 && res.status < 300) rules = parseRobots(res.body);
+      else if (res.status >= 400 && res.status < 500 && res.status !== 429) rules = [];
+      else rules = DISALLOW_ALL;
+    } catch (err) {
+      // Avbrutt av oss selv (klienten koblet fra / tidsfrist): ikke husk det som en feil hos butikken
+      if (signal?.aborted) throw err;
+      rules = DISALLOW_ALL;
     }
-    robotsCache.set(u.origin, rules);
+    robotsCache.set(u.origin, rules, rules === DISALLOW_ALL ? 60_000 : undefined);
   }
-  return isAllowed(rules, u.pathname + u.search);
+  if (rules === DISALLOW_ALL) return "utilgjengelig";
+  return isAllowed(rules, u.pathname + u.search) ? "tillatt" : "sperret";
 }
