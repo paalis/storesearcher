@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import * as cheerio from "cheerio";
 import { safeFetch, FetchBlockedError } from "@/lib/server/safeFetch";
 import { buildSearchUrl, candidateTemplates, isValidTemplate, normalizeUrl, QUERY_TOKEN } from "@/lib/searchTemplate";
+import { apiUrlTemplate } from "@/lib/productApi";
+import type { ProductApi } from "@/lib/types";
 
 type Source = "opensearch" | "skjema" | "testet-mønster" | "gjetning";
 
@@ -24,6 +26,8 @@ export async function GET(req: NextRequest) {
     const home = await safeFetch(storeUrl, { timeoutMs: 7000 });
     const $ = cheerio.load(home.body);
     const pageTitle = $("meta[property='og:site_name']").attr("content") || $("title").first().text().trim();
+    // Kjent plattform med åpent produkt-API? Sendes med i alle svar under.
+    const api = await detectProductApi(home.body, home.finalUrl);
 
     // 1) OpenSearch-beskrivelse
     const osHref = $("link[rel='search'][type='application/opensearchdescription+xml']").attr("href");
@@ -34,7 +38,7 @@ export async function GET(req: NextRequest) {
         const tpl = $x("Url[type='text/html']").attr("template");
         if (tpl?.includes("{searchTerms}")) {
           const template = tpl.replace("{searchTerms}", QUERY_TOKEN).replace(/[&?][\w]+=\{[\w:]+\?\}/g, "");
-          if (isValidTemplate(template)) return NextResponse.json({ template, source: "opensearch" as Source, pageTitle });
+          if (isValidTemplate(template)) return NextResponse.json({ template, source: "opensearch" as Source, pageTitle, api });
         }
       } catch {}
     }
@@ -54,7 +58,7 @@ export async function GET(req: NextRequest) {
       action.search = "";
       action.hash = "";
       const template = `${action.toString()}?${encodeURIComponent(name)}=${QUERY_TOKEN}`;
-      if (isValidTemplate(template)) return NextResponse.json({ template, source: "skjema" as Source, pageTitle });
+      if (isValidTemplate(template)) return NextResponse.json({ template, source: "skjema" as Source, pageTitle, api });
     }
 
     // 3) Test vanlige mønstre parallelt
@@ -69,9 +73,9 @@ export async function GET(req: NextRequest) {
       }),
     );
     const hit = results.find((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled");
-    if (hit) return NextResponse.json({ template: hit.value, source: "testet-mønster" as Source, pageTitle });
+    if (hit) return NextResponse.json({ template: hit.value, source: "testet-mønster" as Source, pageTitle, api });
 
-    return NextResponse.json({ template: candidates[0], source: "gjetning" as Source, pageTitle });
+    return NextResponse.json({ template: candidates[0], source: "gjetning" as Source, pageTitle, api });
   } catch (err) {
     const fallback = candidateTemplates(storeUrl)[0];
     const message =
@@ -112,4 +116,21 @@ async function testTemplateRoute(template: string) {
           : "Kunne ikke nå butikken fra serveren. Åpne testsøket i nettleseren for å sjekke manuelt.",
     });
   }
+}
+
+/** Gjenkjenner Shopify/WooCommerce og bekrefter at produkt-API-et svarer med JSON. */
+async function detectProductApi(html: string, finalUrl: string): Promise<ProductApi | undefined> {
+  const candidates: ProductApi[] = [];
+  if (/cdn\.shopify\.com|Shopify\.shop\s*=|shopify-section/i.test(html)) candidates.push({ type: "shopify" });
+  if (/woocommerce|wp-json\/wc\//i.test(html)) candidates.push({ type: "woocommerce" });
+  for (const api of candidates) {
+    try {
+      const url = buildSearchUrl(apiUrlTemplate(api, finalUrl), "a");
+      const r = await safeFetch(url, { timeoutMs: 4000, maxBytes: 2_000_000, accept: "application/json" });
+      if (r.status !== 200) continue;
+      const json = JSON.parse(r.body);
+      if (api.type === "shopify" ? json?.resources?.results : Array.isArray(json)) return api;
+    } catch {}
+  }
+  return undefined;
 }
