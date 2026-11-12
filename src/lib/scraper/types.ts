@@ -20,6 +20,7 @@ export interface SearchStoreInput {
   searchTemplate: string;
   selectors?: ScrapeSelectors;
   api?: ProductApi;
+  ignoreRobots?: boolean;
 }
 
 export interface SearchRequest {

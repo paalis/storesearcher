@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     const $ = cheerio.load(home.body);
     const pageTitle = $("meta[property='og:site_name']").attr("content") || $("title").first().text().trim();
     // Kjent plattform med åpent produkt-API? Sendes med i alle svar under.
-    const api = await detectProductApi(home.body, home.finalUrl);
+    const detected = await detectProductApi(home.body, home.finalUrl);
 
     // 1) OpenSearch-beskrivelse
     const osHref = $("link[rel='search'][type='application/opensearchdescription+xml']").attr("href");
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
         const tpl = $x("Url[type='text/html']").attr("template");
         if (tpl?.includes("{searchTerms}")) {
           const template = tpl.replace("{searchTerms}", QUERY_TOKEN).replace(/[&?][\w]+=\{[\w:]+\?\}/g, "");
-          if (isValidTemplate(template)) return NextResponse.json({ template, source: "opensearch" as Source, pageTitle, api });
+          if (isValidTemplate(template)) return NextResponse.json({ template, source: "opensearch" as Source, pageTitle, ...detected });
         }
       } catch {}
     }
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
       action.search = "";
       action.hash = "";
       const template = `${action.toString()}?${encodeURIComponent(name)}=${QUERY_TOKEN}`;
-      if (isValidTemplate(template)) return NextResponse.json({ template, source: "skjema" as Source, pageTitle, api });
+      if (isValidTemplate(template)) return NextResponse.json({ template, source: "skjema" as Source, pageTitle, ...detected });
     }
 
     // 3) Test vanlige mønstre parallelt
@@ -74,9 +74,9 @@ export async function GET(req: NextRequest) {
       }),
     );
     const hit = results.find((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled");
-    if (hit) return NextResponse.json({ template: hit.value, source: "testet-mønster" as Source, pageTitle, api });
+    if (hit) return NextResponse.json({ template: hit.value, source: "testet-mønster" as Source, pageTitle, ...detected });
 
-    return NextResponse.json({ template: candidates[0], source: "gjetning" as Source, pageTitle, api });
+    return NextResponse.json({ template: candidates[0], source: "gjetning" as Source, pageTitle, ...detected });
   } catch (err) {
     const fallback = candidateTemplates(storeUrl)[0];
     const message =
@@ -119,21 +119,25 @@ async function testTemplateRoute(template: string) {
   }
 }
 
-/** Gjenkjenner Shopify/WooCommerce, sjekker robots.txt og bekrefter at produkt-API-et svarer med JSON. */
-async function detectProductApi(html: string, finalUrl: string): Promise<ProductApi | undefined> {
+/**
+ * Gjenkjenner Shopify/WooCommerce og bekrefter at produkt-API-et svarer med JSON.
+ * Merker API-et hvis butikkens robots.txt sperrer det (f.eks. Disallow: /*?q=*).
+ */
+async function detectProductApi(html: string, finalUrl: string): Promise<{ api?: ProductApi; apiRobotsBlocked?: boolean }> {
   const candidates: ProductApi[] = [];
   if (/cdn\.shopify\.com|Shopify\.shop\s*=|shopify-section/i.test(html)) candidates.push({ type: "shopify" });
   if (/woocommerce|wp-json\/wc\//i.test(html)) candidates.push({ type: "woocommerce" });
   for (const api of candidates) {
     try {
       const url = buildSearchUrl(apiUrlTemplate(api, finalUrl), "a");
-      // Ikke foreslå et API butikken har sperret i robots.txt (f.eks. Disallow: /*?q=*)
-      if (!(await robotsAllows(url))) continue;
+      const allowed = await robotsAllows(url);
       const r = await safeFetch(url, { timeoutMs: 4000, maxBytes: 2_000_000, accept: "application/json" });
       if (r.status !== 200) continue;
       const json = JSON.parse(r.body);
-      if (api.type === "shopify" ? json?.resources?.results : Array.isArray(json)) return api;
+      if (api.type === "shopify" ? json?.resources?.results : Array.isArray(json)) {
+        return allowed ? { api } : { api, apiRobotsBlocked: true };
+      }
     } catch {}
   }
-  return undefined;
+  return {};
 }

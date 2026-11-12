@@ -9,7 +9,10 @@ import { buildSearchUrl, getHostname, isValidTemplate, normalizeUrl, QUERY_TOKEN
 import { Modal } from "./Modal";
 import { CategoryChip, StoreLogo } from "./ui";
 
-type Suggest = { state: "idle" } | { state: "loading" } | { state: "done"; source: string; warning?: string; api?: ProductApi };
+type Suggest =
+  | { state: "idle" }
+  | { state: "loading" }
+  | { state: "done"; source: string; warning?: string; api?: ProductApi; apiRobotsBlocked?: boolean };
 type Test = { state: "idle" } | { state: "loading" } | { state: "done"; ok: boolean; message: string };
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -48,7 +51,7 @@ export function StoreForm({
   const [test, setTest] = useState<Test>({ state: "idle" });
   const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(
-    Boolean(store?.api || (store?.selectors && Object.values(store.selectors).some(Boolean))),
+    Boolean(store?.api || store?.ignoreRobots || (store?.selectors && Object.values(store.selectors).some(Boolean))),
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -68,7 +71,7 @@ export function StoreForm({
         name: f.name || prettifyName(data.pageTitle, url),
         api: f.api ?? data.api,
       }));
-      setSuggest({ state: "done", source: data.source, warning: data.warning, api: data.api });
+      setSuggest({ state: "done", source: data.source, warning: data.warning, api: data.api, apiRobotsBlocked: data.apiRobotsBlocked });
       setTest({ state: "idle" });
     } catch {
       setSuggest({ state: "done", source: "gjetning", warning: "Fikk ikke kontakt med serveren." });
@@ -215,9 +218,15 @@ export function StoreForm({
             {suggest.state === "loading" && " Leter etter søkeside …"}
             {suggest.state === "done" && ` Forslag: ${SOURCE_LABEL[suggest.source] ?? suggest.source}.`}
             {suggest.state === "done" && suggest.warning && <span className="block text-amber-600 dark:text-amber-400">{suggest.warning}</span>}
-            {suggest.state === "done" && suggest.api && (
+            {suggest.state === "done" && suggest.api && !suggest.apiRobotsBlocked && (
               <span className="block text-green-600 dark:text-green-400">
                 Fant {PRODUCT_API_LABELS[suggest.api.type]}-API – brukes av «Hent produkter».
+              </span>
+            )}
+            {suggest.state === "done" && suggest.api && suggest.apiRobotsBlocked && (
+              <span className="block text-amber-600 dark:text-amber-400">
+                Fant {PRODUCT_API_LABELS[suggest.api.type]}-API, men butikkens robots.txt ber roboter la søk være. Slå på
+                «Ignorer robots.txt» under Avansert hvis du vil hente produkter likevel.
               </span>
             )}
           </p>
@@ -304,6 +313,18 @@ export function StoreForm({
                 />
               </div>
               <ApiEditor api={form.api} onChange={(api) => set("api", api)} />
+              <div className="rounded-xl bg-surface-2 p-3">
+                <Toggle
+                  label="Ignorer robots.txt (jeg søker selv)"
+                  checked={form.ignoreRobots === true}
+                  onChange={(v) => set("ignoreRobots", v || undefined)}
+                />
+                <p className="mt-1.5 text-xs text-muted">
+                  robots.txt er butikkens beskjed til roboter som går gjennom nettstedet automatisk. «Hent produkter»
+                  følger den som standard. Slår du dette på, hentes produktene likevel når du selv søker – én forespørsel
+                  per søk, som når du åpner søkesiden selv. Butikken kan likevel blokkere slike forespørsler.
+                </p>
+              </div>
               <p className="text-xs text-muted">
                 CSS-selektorer brukes av «Hent produkter» når butikken ikke har strukturerte data (JSON-LD). Feltene
                 tittel, pris, bilde og lenke er relative til produktkortet.

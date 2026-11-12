@@ -30,6 +30,7 @@ function validate(body: unknown): SearchRequest | string {
       searchTemplate: r.searchTemplate,
       selectors: clean,
       api: parseProductApi(r.api),
+      ignoreRobots: r.ignoreRobots === true,
     });
   }
   return { query, stores };

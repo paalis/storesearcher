@@ -5,7 +5,7 @@ import { TtlCache } from "./cache";
 import { extractProducts } from "./extract";
 import { productsFromApi } from "./fromApi";
 import { apiUrlTemplate } from "@/lib/productApi";
-import { robotsAllows } from "./robots";
+import { robotsVerdict, type RobotsVerdict } from "./robots";
 import { waitForHostSlot } from "./rateLimit";
 import type { ExtractSource, Product, SearchEvent, SearchStoreInput } from "./types";
 
@@ -28,7 +28,7 @@ export async function searchStore(store: SearchStoreInput, query: string, signal
   });
   if (!searchUrl && !store.api) return fail("Butikken mangler gyldig søkemal.");
 
-  const cacheKey = `${searchUrl}|${JSON.stringify(store.selectors ?? {})}|${JSON.stringify(store.api ?? {})}`;
+  const cacheKey = `${searchUrl}|${JSON.stringify(store.selectors ?? {})}|${JSON.stringify(store.api ?? {})}|${store.ignoreRobots ? 1 : 0}`;
   const cached = resultCache.get(cacheKey);
   if (cached) {
     return { type: "result", storeId: store.id, searchUrl, status: "ok", ...cached, cached: true, ms: Date.now() - started };
@@ -52,9 +52,8 @@ export async function searchStore(store: SearchStoreInput, query: string, signal
 
   // 2) HTML-søkesiden: JSON-LD → OpenGraph → selektorer
   try {
-    if (!(await robotsAllows(searchUrl, deadline))) {
-      return fail("Butikkens robots.txt tillater ikke automatisk henting av søkesiden.");
-    }
+    const verdict = store.ignoreRobots ? "tillatt" : await robotsVerdict(searchUrl, deadline);
+    if (verdict !== "tillatt") return fail(robotsMessage(verdict, "søkesiden"));
     await waitForHostSlot(new URL(searchUrl).origin, STORE_TIMEOUT_MS - (Date.now() - started) - 1000);
     const remaining = STORE_TIMEOUT_MS - (Date.now() - started);
     if (remaining <= 0) return fail("Tidsavbrudd.");
@@ -90,7 +89,8 @@ async function fetchFromApi(store: SearchStoreInput, query: string, signal: Abor
   const api = store.api!;
   if (api.type !== "json" && !store.url) throw new Error("Butikken mangler nettadresse for API-et.");
   const apiUrl = buildSearchUrl(apiUrlTemplate(api, store.url ?? ""), query);
-  if (!(await robotsAllows(apiUrl, signal))) throw new Error("Butikkens robots.txt tillater ikke bruk av produkt-API-et.");
+  const verdict = store.ignoreRobots ? "tillatt" : await robotsVerdict(apiUrl, signal);
+  if (verdict !== "tillatt") throw new Error(robotsMessage(verdict, "produkt-API-et"));
   await waitForHostSlot(new URL(apiUrl).origin, STORE_TIMEOUT_MS - (Date.now() - started) - 1000);
   const remaining = STORE_TIMEOUT_MS - (Date.now() - started);
   if (remaining <= 0) throw new Error("Tidsavbrudd.");
@@ -103,4 +103,10 @@ async function fetchFromApi(store: SearchStoreInput, query: string, signal: Abor
     throw new Error("Produkt-API-et svarte ikke med JSON.");
   }
   return productsFromApi(json, api, res.finalUrl);
+}
+
+function robotsMessage(verdict: Exclude<RobotsVerdict, "tillatt">, what: string): string {
+  return verdict === "sperret"
+    ? `Butikkens robots.txt tillater ikke automatisk henting av ${what}.${" Slå på «Ignorer robots.txt» i butikkinnstillingene hvis du vil hente likevel."}`
+    : "Kunne ikke lese butikkens robots.txt, så ingenting ble hentet. Prøv igjen om litt.";
 }

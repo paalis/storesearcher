@@ -93,6 +93,7 @@ export function parseAppData(input: unknown): AppData {
       createdAt: str(r.createdAt) || new Date().toISOString(),
       selectors: Object.values(selectors).some(Boolean) ? selectors : undefined,
       api: parseProductApi(r.api),
+      ignoreRobots: r.ignoreRobots === true || undefined,
     };
   });
 

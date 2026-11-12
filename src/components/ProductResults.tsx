@@ -29,7 +29,7 @@ export function ProductResults({ query, stores }: { query: string; stores: Store
   const [nonce, setNonce] = useState(0);
 
   const storeKey = stores
-    .map((s) => `${s.id}:${s.url}:${s.searchTemplate}:${JSON.stringify(s.selectors ?? {})}:${JSON.stringify(s.api ?? {})}`)
+    .map((s) => `${s.id}:${s.url}:${s.searchTemplate}:${JSON.stringify(s.selectors ?? {})}:${JSON.stringify(s.api ?? {})}:${s.ignoreRobots ? 1 : 0}`)
     .join("|");
 
   useEffect(() => {
@@ -54,6 +54,7 @@ export function ProductResults({ query, stores }: { query: string; stores: Store
               searchTemplate: s.searchTemplate,
               selectors: s.selectors,
               api: s.api,
+              ignoreRobots: s.ignoreRobots,
             })),
           }),
         });

@@ -82,7 +82,8 @@ En mal er en adresse der `{query}` byttes ut med søkeordet, f.eks. `https://but
 Nettleseren sender søkeordet og de valgte butikkene (med maler og selektorer, siden dataene ligger i nettleseren). Serveren svarer med en NDJSON-strøm, én linje per butikk så snart den er ferdig:
 
 - Butikkene hentes **parallelt** med **8 sekunders** timeout per butikk.
-- **robots.txt** respekteres (cachet i 1 time). Søkesider som er sperret, hentes ikke.
+- **robots.txt** respekteres (cachet i 1 time). Søkesider som er sperret, hentes ikke. Kan ikke robots.txt leses (nettverksfeil, 5xx eller 429), hentes ingenting, og appen prøver igjen etter ett minutt.
+- **«Ignorer robots.txt (jeg søker selv)»** er en bryter per butikk under «Avansert» og er av som standard. robots.txt er beskjeden til roboter som går gjennom nettstedet automatisk. Med bryteren på hentes produktene likevel når du selv søker: én forespørsel per søk, som når du åpner søkesiden selv. Eksempel: Brando sperrer søk i robots.txt, men gir produkter via Shopify-API-et når bryteren er på.
 - Har butikken et **produkt-API** (se under), brukes det først. Ellers trekkes produktene ut av søkesiden med **JSON-LD** (schema.org `Product`/`ItemList`), deretter **OpenGraph**, og til slutt **CSS-selektorer** du legger inn under «Avansert» i butikkinnstillingene.
 - Resultatene **caches** kort, og det er **rate limiting** både per klient og per butikk.
 - Butikker som feiler, vises som «kunne ikke hente» med en lenke til søkesiden.
@@ -98,7 +99,7 @@ Mange butikker viser søkeresultatene med JavaScript, så HTML-en inneholder ing
 | WooCommerce | `/wp-json/wc/store/v1/products?search=…` | Kleins |
 | Egendefinert JSON | Din egen URL-mal med `{query}`, pluss stier som `data.products`, `name`, `price.amount` og `images.0.url` | Butikker som bruker Algolia, Klevu o.l. |
 
-«Foreslå automatisk» kjenner igjen Shopify og WooCommerce og sjekker at API-et svarer. Ved feil faller appen tilbake til søkesiden. Robots.txt gjelder også API-adressene. Brando er for eksempel Shopify-butikk, men forbyr automatiske søk (`Disallow: /*?q=*`), og Volt blokkerer automatiske forespørsler med Cloudflare. Begge brukes derfor bare via «Åpne søk».
+«Foreslå automatisk» kjenner igjen Shopify og WooCommerce og sjekker at API-et svarer. Ved feil faller appen tilbake til søkesiden. Robots.txt gjelder også API-adressene. Brando er for eksempel Shopify-butikk, men sperrer automatiske søk (`Disallow: /*?q=*`), så API-et brukes bare hvis du slår på «Ignorer robots.txt» for butikken. Volt blokkerer automatiske forespørsler med Cloudflare, og det hjelper ikke bryteren mot. Volt brukes derfor bare via «Åpne søk».
 
 Finn API-et til en annen butikk slik: åpne utviklerverktøyene i nettleseren (Network-fanen), gjør et søk i butikken, og se etter et JSON-kall som inneholder søkeordet.
 

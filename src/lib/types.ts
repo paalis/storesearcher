@@ -74,6 +74,11 @@ export interface Store {
   selectors?: ScrapeSelectors;
   /** Valgfritt produkt-API. Brukes før HTML-uthenting. */
   api?: ProductApi;
+  /**
+   * Hent produkter selv om butikkens robots.txt sier nei. Ment for søk du selv starter
+   * (ikke crawling). Av som standard.
+   */
+  ignoreRobots?: boolean;
 }
 
 export interface AppData {
