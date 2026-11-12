@@ -109,14 +109,21 @@ export function ProductResults({ query, stores }: { query: string; stores: Store
     const byRank = filtered.sort((a, b) => a.rank - b.rank);
     if (sort === "relevans") return byRank;
     const dir = sort === "pris-stigende" ? 1 : -1;
+    // Beløp i ulike valutaer kan ikke sammenlignes direkte: NOK først (ukjent valuta regnes som NOK),
+    // deretter hver annen valuta for seg, sortert på pris innenfor valutaen.
+    const cur = (r: Row) => (r.currency || "NOK").toUpperCase();
     return [...byRank].sort((a, b) => {
-      if (a.price === null) return 1;
+      if (a.price === null) return b.price === null ? 0 : 1;
       if (b.price === null) return -1;
+      const ca = cur(a);
+      const cb = cur(b);
+      if (ca !== cb) return ca === "NOK" ? -1 : cb === "NOK" ? 1 : ca.localeCompare(cb);
       return (a.price - b.price) * dir;
     });
   }, [results, stores, storeFilter, sort]);
 
   const loading = stores.filter((s) => results[s.id]?.status === "loading").length;
+  const currencies = new Set(rows.filter((r) => r.price !== null).map((r) => (r.currency || "NOK").toUpperCase()));
   const finished = stores.length - loading;
 
   if (fatal) {
@@ -161,6 +168,12 @@ export function ProductResults({ query, stores }: { query: string; stores: Store
         </label>
       </div>
 
+      {sort !== "relevans" && currencies.size > 1 && (
+        <p className="mb-3 text-xs text-muted">
+          Resultatene har flere valutaer ({[...currencies].join(", ")}). De sorteres på pris innenfor hver valuta, med NOK
+          først – beløp i ulike valutaer sammenlignes ikke.
+        </p>
+      )}
       <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
         {stores.map((s) => {
           const r = results[s.id];
