@@ -5,6 +5,9 @@ import { buildSearchUrl, candidateTemplates, isValidTemplate, normalizeUrl, QUER
 
 type Source = "opensearch" | "skjema" | "testet-mønster" | "gjetning";
 
+/** Unikt testord: ekte søkesider gjentar som regel søkeordet i HTML-en. */
+const PROBE = "bbprobe7731";
+
 /**
  * GET /api/template?url=https://butikk.no         → foreslår søke-URL-mal
  * GET /api/template?test=https://butikk.no/s?q={query} → tester en mal
@@ -59,9 +62,9 @@ export async function GET(req: NextRequest) {
     const origin = new URL(home.finalUrl).origin;
     const results = await Promise.allSettled(
       candidates.map(async (tpl) => {
-        const r = await safeFetch(buildSearchUrl(tpl, "test"), { timeoutMs: 5000, maxBytes: 300_000 });
-        const redirectedHome = new URL(r.finalUrl).pathname.replace(/\/$/, "") === "" && !new URL(r.finalUrl).search;
-        if (r.status === 200 && !redirectedHome && new URL(r.finalUrl).origin === origin) return tpl;
+        const r = await safeFetch(buildSearchUrl(tpl, PROBE), { timeoutMs: 5000, maxBytes: 1_000_000 });
+        const echoed = r.body.toLowerCase().includes(PROBE);
+        if (r.status === 200 && echoed && new URL(r.finalUrl).origin === origin) return tpl;
         throw new Error(String(r.status));
       }),
     );
@@ -81,21 +84,24 @@ async function testTemplateRoute(template: string) {
   if (!isValidTemplate(template)) {
     return NextResponse.json({ ok: false, message: `Malen må være en gyldig URL og inneholde ${QUERY_TOKEN}.` });
   }
-  const url = buildSearchUrl(template, "test");
+  const url = buildSearchUrl(template, PROBE);
   try {
-    const r = await safeFetch(url, { timeoutMs: 7000, maxBytes: 500_000 });
+    const r = await safeFetch(url, { timeoutMs: 7000, maxBytes: 1_000_000 });
     const final = new URL(r.finalUrl);
     const redirectedHome = final.pathname.replace(/\/$/, "") === "" && !final.search;
-    const ok = r.status === 200 && !redirectedHome;
+    const echoed = r.body.toLowerCase().includes(PROBE);
+    const ok = r.status === 200 && !redirectedHome && echoed;
     return NextResponse.json({
       ok,
       status: r.status,
       finalUrl: r.finalUrl,
       message: ok
-        ? `Svarte ${r.status} – malen ser ut til å fungere.`
+        ? "Søkesiden svarte og viste søkeordet – malen fungerer."
         : redirectedHome
           ? "Butikken sendte deg til forsiden – malen er trolig feil."
-          : `Butikken svarte ${r.status}.`,
+          : r.status === 200
+            ? "Siden svarte, men søkeordet ble ikke funnet i HTML-en. Butikken kan laste resultater med JavaScript – åpne testsøket for å sjekke."
+            : `Butikken svarte ${r.status} – malen er trolig feil.`,
     });
   } catch (err) {
     return NextResponse.json({

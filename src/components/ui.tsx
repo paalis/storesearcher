@@ -7,28 +7,35 @@ import { CATEGORY_COLORS } from "@/lib/colors";
 import { faviconUrl, getHostname } from "@/lib/searchTemplate";
 
 export function StoreLogo({ store, size = 40 }: { store: Pick<Store, "name" | "url" | "logoUrl">; size?: number }) {
-  const [failed, setFailed] = useState(false);
   const src = store.logoUrl || (store.url ? faviconUrl(store.url, 64) : "");
+  const [state, setState] = useState<{ src: string; status: "loading" | "loaded" | "failed" }>({ src, status: "loading" });
+  const status = state.src === src ? state.status : "loading";
   const initials = store.name.trim().slice(0, 2).toUpperCase() || "?";
+  const img = size * 0.6;
   return (
     <span
-      className="grid shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-white text-xs font-semibold text-slate-700"
+      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-xl border border-border text-xs font-semibold transition-colors ${
+        status === "loaded" ? "bg-white" : "bg-accent-soft text-accent"
+      }`}
       style={{ width: size, height: size }}
     >
-      {src && !failed ? (
+      {status !== "loaded" && <span aria-hidden>{initials}</span>}
+      {src && status !== "failed" && (
         // eslint-disable-next-line @next/next/no-img-element -- ekstern favicon med ukjent domene
         <img
           src={src}
           alt=""
-          width={size * 0.6}
-          height={size * 0.6}
-          className="object-contain"
-          style={{ width: size * 0.6, height: size * 0.6 }}
-          onError={() => setFailed(true)}
+          width={img}
+          height={img}
+          className={`absolute object-contain ${status === "loaded" ? "opacity-100" : "opacity-0"}`}
+          style={{ width: img, height: img }}
+          onLoad={(e) =>
+            // Googles tjeneste returnerer et 16px globus-ikon når den ikke finner noe
+            setState({ src, status: e.currentTarget.naturalWidth <= 16 && size > 24 ? "failed" : "loaded" })
+          }
+          onError={() => setState({ src, status: "failed" })}
           loading="lazy"
         />
-      ) : (
-        initials
       )}
     </span>
   );

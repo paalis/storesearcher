@@ -36,6 +36,8 @@ export async function assertPublicUrl(raw: string): Promise<URL> {
     throw new FetchBlockedError("Ugyldig URL");
   }
   if (!["http:", "https:"].includes(url.protocol)) throw new FetchBlockedError("Kun http og https er tillatt");
+  // Kun for lokal testing mot falske butikker – aldri sett dette i produksjon
+  if (process.env.SCRAPER_ALLOW_PRIVATE === "1" && process.env.NODE_ENV !== "production") return url;
   const host = url.hostname.replace(/^\[|\]$/g, "");
   if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) {
     throw new FetchBlockedError("Interne adresser er ikke tillatt");
