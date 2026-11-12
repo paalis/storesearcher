@@ -28,7 +28,9 @@ export function ProductResults({ query, stores }: { query: string; stores: Store
   const [sort, setSort] = useState<Sort>("relevans");
   const [nonce, setNonce] = useState(0);
 
-  const storeKey = stores.map((s) => `${s.id}:${s.searchTemplate}:${JSON.stringify(s.selectors ?? {})}`).join("|");
+  const storeKey = stores
+    .map((s) => `${s.id}:${s.url}:${s.searchTemplate}:${JSON.stringify(s.selectors ?? {})}:${JSON.stringify(s.api ?? {})}`)
+    .join("|");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -45,7 +47,14 @@ export function ProductResults({ query, stores }: { query: string; stores: Store
           signal: controller.signal,
           body: JSON.stringify({
             query,
-            stores: stores.map((s) => ({ id: s.id, name: s.name, searchTemplate: s.searchTemplate, selectors: s.selectors })),
+            stores: stores.map((s) => ({
+              id: s.id,
+              name: s.name,
+              url: s.url,
+              searchTemplate: s.searchTemplate,
+              selectors: s.selectors,
+              api: s.api,
+            })),
           }),
         });
         if (!res.ok || !res.body) {
@@ -195,7 +204,9 @@ export function ProductResults({ query, stores }: { query: string; stores: Store
                 <p className="truncate text-xs text-muted">
                   {r.status === "error"
                     ? r.error
-                    : "Siden har ikke JSON-LD/OpenGraph. Legg inn CSS-selektorer i butikkinnstillingene, eller åpne søket."}
+                    : r.source === "api"
+                      ? "Produkt-API-et ga ingen treff på dette søket."
+                      : "Siden har ikke JSON-LD/OpenGraph. Legg inn et produkt-API eller CSS-selektorer i butikkinnstillingene."}
                 </p>
               </div>
               <a href={url} target="_blank" rel="noopener noreferrer" className="btn-secondary shrink-0 px-3 py-1.5 text-xs">

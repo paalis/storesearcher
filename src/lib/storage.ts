@@ -1,5 +1,6 @@
 import type { AppData, Category, CategoryColor, Store } from "./types";
 import { seedData } from "./seed";
+import { parseProductApi } from "./productApi";
 
 /**
  * Lagringsgrensesnitt. Dagens implementasjon bruker localStorage,
@@ -91,6 +92,7 @@ export function parseAppData(input: unknown): AppData {
       active: r.active !== false,
       createdAt: str(r.createdAt) || new Date().toISOString(),
       selectors: Object.values(selectors).some(Boolean) ? selectors : undefined,
+      api: parseProductApi(r.api),
     };
   });
 

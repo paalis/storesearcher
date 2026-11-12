@@ -30,6 +30,34 @@ export interface ScrapeSelectors {
   link?: string;
 }
 
+/**
+ * Produkt-API for «Hent produkter». Raskere og mer pålitelig enn å lese HTML
+ * når butikken laster søkeresultatene med JavaScript.
+ */
+export type ProductApi =
+  | { type: "shopify" }
+  | { type: "woocommerce" }
+  | {
+      type: "json";
+      /** URL-mal med {query}, f.eks. https://butikk.no/api/search?q={query} */
+      url: string;
+      /** Sti til produktlisten i svaret, f.eks. "data.products" (tom = roten) */
+      items?: string;
+      /** Stier relative til hvert produkt, f.eks. "name", "price.value", "images.0.url" */
+      title: string;
+      price?: string;
+      image?: string;
+      link: string;
+      /** Del prisen på dette tallet, f.eks. 100 når prisen er i øre */
+      priceDivisor?: number;
+    };
+
+export const PRODUCT_API_LABELS: Record<ProductApi["type"], string> = {
+  shopify: "Shopify",
+  woocommerce: "WooCommerce",
+  json: "Egendefinert JSON-API",
+};
+
 export interface Store {
   id: string;
   name: string;
@@ -44,6 +72,8 @@ export interface Store {
   active: boolean;
   createdAt: string;
   selectors?: ScrapeSelectors;
+  /** Valgfritt produkt-API. Brukes før HTML-uthenting. */
+  api?: ProductApi;
 }
 
 export interface AppData {

@@ -1,4 +1,4 @@
-import type { ScrapeSelectors } from "@/lib/types";
+import type { ProductApi, ScrapeSelectors } from "@/lib/types";
 
 export interface Product {
   title: string;
@@ -9,14 +9,17 @@ export interface Product {
   url: string;
 }
 
-export type ExtractSource = "json-ld" | "opengraph" | "selektorer";
+export type ExtractSource = "api" | "json-ld" | "opengraph" | "selektorer";
 
 /** Det klienten sender for hver butikk (dataene ligger i nettleseren). */
 export interface SearchStoreInput {
   id: string;
   name: string;
+  /** Butikkens nettadresse (brukes som base for Shopify/WooCommerce-API) */
+  url?: string;
   searchTemplate: string;
   selectors?: ScrapeSelectors;
+  api?: ProductApi;
 }
 
 export interface SearchRequest {

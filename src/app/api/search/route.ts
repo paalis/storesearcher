@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { searchStore } from "@/lib/scraper/searchStore";
 import { checkClientLimit } from "@/lib/scraper/rateLimit";
 import type { SearchEvent, SearchRequest, SearchStoreInput } from "@/lib/scraper/types";
+import { parseProductApi } from "@/lib/productApi";
 
 export const maxDuration = 20;
 
@@ -22,7 +23,14 @@ function validate(body: unknown): SearchRequest | string {
     const clean = Object.fromEntries(
       Object.entries(sel).filter(([k, v]) => ["item", "title", "price", "image", "link"].includes(k) && typeof v === "string" && v.length < 300),
     );
-    stores.push({ id: r.id, name: String(r.name ?? ""), searchTemplate: r.searchTemplate, selectors: clean });
+    stores.push({
+      id: r.id,
+      name: String(r.name ?? ""),
+      url: typeof r.url === "string" && /^https?:\/\//.test(r.url) ? r.url : undefined,
+      searchTemplate: r.searchTemplate,
+      selectors: clean,
+      api: parseProductApi(r.api),
+    });
   }
   return { query, stores };
 }
