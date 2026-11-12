@@ -3,8 +3,8 @@ import type { AppData } from "./types";
 const created = "2026-11-12T00:00:00.000Z";
 
 /**
- * Eksempeldata. Søkemalene er beste gjetning basert på plattformene
- * butikkene bruker – bruk «Test mal» i redigeringsvinduet for å bekrefte.
+ * Eksempeldata. Søkemalene til Brando, Retro og Kleins er verifisert (nov. 2026).
+ * De øvrige er beste gjetning – bruk «Test mal» i redigeringsvinduet for å bekrefte.
  */
 export const seedData: AppData = {
   version: 1,
@@ -18,10 +18,10 @@ export const seedData: AppData = {
     {
       id: "store-brando",
       name: "Brando",
-      url: "https://www.brando.no",
-      searchTemplate: "https://www.brando.no/search?q={query}",
-      categoryIds: ["cat-herre", "cat-merker"],
-      note: "Søkemal ikke verifisert – test og juster ved behov.",
+      url: "https://brando.no",
+      searchTemplate: "https://brando.no/search?q={query}",
+      categoryIds: ["cat-herre", "cat-dame", "cat-merker"],
+      note: "Shopify-butikk. robots.txt forbyr automatiske søk (Disallow: /*?q=*), så «Hent produkter» er av – bruk «Åpne søk».",
       favorite: true,
       active: true,
       createdAt: created,
@@ -32,7 +32,7 @@ export const seedData: AppData = {
       url: "https://voltfashion.com/no",
       searchTemplate: "https://voltfashion.com/no/search?q={query}",
       categoryIds: ["cat-herre", "cat-merker"],
-      note: "Varner-kjede. Søkemal ikke verifisert.",
+      note: "Varner-kjede. Beskyttet av Cloudflare, så «Hent produkter» fungerer ikke – bruk «Åpne søk».",
       favorite: true,
       active: true,
       createdAt: created,
@@ -40,10 +40,10 @@ export const seedData: AppData = {
     {
       id: "store-retro",
       name: "Retro",
-      url: "https://www.retro.no",
-      searchTemplate: "https://www.retro.no/search?q={query}",
+      url: "https://retro.no",
+      searchTemplate: "https://retro.no/search?q={query}",
       categoryIds: ["cat-herre", "cat-dame", "cat-merker"],
-      note: "Retro Nordre, Trondheim. Søkemal ikke verifisert.",
+      note: "Retro Nordre, Trondheim.",
       favorite: false,
       active: true,
       createdAt: created,
@@ -65,10 +65,22 @@ export const seedData: AppData = {
       url: "https://www.decades.no",
       searchTemplate: "https://www.decades.no/search?q={query}",
       categoryIds: ["cat-jeans", "cat-herre", "cat-dame"],
-      note: "Tidligere Boys of Europe. Søkemal ikke verifisert.",
+      note: "Tidligere Boys of Europe. Søkemalen gir 404 – finn riktig søkeadresse og oppdater.",
       favorite: false,
       active: true,
       createdAt: created,
+    },
+    {
+      id: "store-kleins",
+      name: "Kleins",
+      url: "https://www.kleins.no",
+      searchTemplate: "https://www.kleins.no/?s={query}&post_type=product",
+      categoryIds: ["cat-herre", "cat-dame", "cat-merker"],
+      note: "Trondheim. WooCommerce-butikk – produkter hentes via WooCommerce Store API.",
+      favorite: false,
+      active: true,
+      createdAt: created,
+      api: { type: "woocommerce" },
     },
   ],
 };
