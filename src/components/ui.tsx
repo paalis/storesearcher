@@ -14,10 +14,10 @@ export function StoreLogo({ store, size = 40 }: { store: Pick<Store, "name" | "u
   const img = size * 0.6;
   return (
     <span
-      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-xl border border-border text-xs font-semibold transition-colors ${
+      className={`relative grid shrink-0 place-items-center overflow-hidden border border-border font-semibold transition-colors ${size <= 24 ? "rounded-md" : "rounded-xl"} ${
         status === "loaded" ? "bg-white" : "bg-accent-soft text-accent"
       }`}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, fontSize: Math.max(8, Math.round(size * 0.32)) }}
     >
       {status !== "loaded" && <span aria-hidden>{initials}</span>}
       {src && status !== "failed" && (

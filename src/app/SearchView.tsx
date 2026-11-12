@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, ExternalLink, Layers, Plus, Search, SlidersHorizontal, Store as StoreIcon, X } from "lucide-react";
+import { AlertTriangle, ExternalLink, Layers, PackageSearch, Plus, Search, SlidersHorizontal, Store as StoreIcon, X } from "lucide-react";
 import { sortedCategories, sortStores, useAppData } from "@/lib/useAppData";
 import { useExcluded } from "@/lib/useSelection";
 import { buildSearchUrl, getHostname } from "@/lib/searchTemplate";
 import type { Store } from "@/lib/types";
 import { SEARCH_INPUT_ID } from "@/components/AppShell";
 import { CategoryChip, EmptyState, FavoriteStar, Loading, StoreLogo } from "@/components/ui";
+import { ProductResults } from "@/components/ProductResults";
 
 export function SearchView() {
   const data = useAppData();
@@ -18,6 +19,7 @@ export function SearchView() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState(params.get("q") ?? "");
   const query = (params.get("q") ?? "").trim();
+  const mode = params.get("vis") === "produkter" ? "produkter" : "snarveier";
   const [excluded, setExcluded] = useExcluded();
   const [showPicker, setShowPicker] = useState(false);
   const [blocked, setBlocked] = useState<Store[] | null>(null);
@@ -54,7 +56,7 @@ export function SearchView() {
   function submit(e: FormEvent) {
     e.preventDefault();
     const q = draft.trim();
-    router.replace(q ? `/?q=${encodeURIComponent(q)}` : "/", { scroll: false });
+    router.replace(q ? `/?q=${encodeURIComponent(q)}${mode === "produkter" ? "&vis=produkter" : ""}` : "/", { scroll: false });
     inputRef.current?.blur();
   }
 
@@ -88,6 +90,14 @@ export function SearchView() {
         } catch {}
     }
     setBlocked(failed.length ? failed : null);
+  }
+
+  function setMode(next: "snarveier" | "produkter") {
+    const p = new URLSearchParams(params.toString());
+    p.delete("fokus");
+    if (next === "produkter") p.set("vis", "produkter");
+    else p.delete("vis");
+    router.replace(`/?${p.toString()}`, { scroll: false });
   }
 
   const allSelected = searchable.length > 0 && searchable.every((s) => selected.has(s.id));
@@ -254,6 +264,27 @@ export function SearchView() {
             </button>
           </div>
 
+          <div role="tablist" aria-label="Visning" className="mb-4 inline-flex rounded-xl bg-surface-2 p-1 text-sm">
+            {(
+              [
+                ["snarveier", "Snarveier", ExternalLink],
+                ["produkter", "Hent produkter", PackageSearch],
+              ] as const
+            ).map(([key, label, Icon]) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={mode === key}
+                onClick={() => setMode(key)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
+                  mode === key ? "bg-surface text-fg shadow-sm" : "text-muted hover:text-fg"
+                }`}
+              >
+                <Icon className="size-4" /> {label}
+              </button>
+            ))}
+          </div>
+
           {blocked && (
             <div role="alert" className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
               <div className="flex items-start gap-2">
@@ -287,6 +318,9 @@ export function SearchView() {
             </div>
           )}
 
+          {mode === "produkter" ? (
+            <ProductResults query={query} stores={selectedStores} />
+          ) : (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {selectedStores.map((s) => {
               const url = buildSearchUrl(s.searchTemplate, query);
@@ -317,6 +351,7 @@ export function SearchView() {
               );
             })}
           </ul>
+          )}
         </section>
       )}
     </>
