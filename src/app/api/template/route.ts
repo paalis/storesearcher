@@ -3,6 +3,7 @@ import * as cheerio from "cheerio";
 import { safeFetch, FetchBlockedError } from "@/lib/server/safeFetch";
 import { buildSearchUrl, candidateTemplates, isValidTemplate, normalizeUrl, QUERY_TOKEN } from "@/lib/searchTemplate";
 import { apiUrlTemplate } from "@/lib/productApi";
+import { robotsAllows } from "@/lib/scraper/robots";
 import type { ProductApi } from "@/lib/types";
 
 type Source = "opensearch" | "skjema" | "testet-mønster" | "gjetning";
@@ -118,7 +119,7 @@ async function testTemplateRoute(template: string) {
   }
 }
 
-/** Gjenkjenner Shopify/WooCommerce og bekrefter at produkt-API-et svarer med JSON. */
+/** Gjenkjenner Shopify/WooCommerce, sjekker robots.txt og bekrefter at produkt-API-et svarer med JSON. */
 async function detectProductApi(html: string, finalUrl: string): Promise<ProductApi | undefined> {
   const candidates: ProductApi[] = [];
   if (/cdn\.shopify\.com|Shopify\.shop\s*=|shopify-section/i.test(html)) candidates.push({ type: "shopify" });
@@ -126,6 +127,8 @@ async function detectProductApi(html: string, finalUrl: string): Promise<Product
   for (const api of candidates) {
     try {
       const url = buildSearchUrl(apiUrlTemplate(api, finalUrl), "a");
+      // Ikke foreslå et API butikken har sperret i robots.txt (f.eks. Disallow: /*?q=*)
+      if (!(await robotsAllows(url))) continue;
       const r = await safeFetch(url, { timeoutMs: 4000, maxBytes: 2_000_000, accept: "application/json" });
       if (r.status !== 200) continue;
       const json = JSON.parse(r.body);
