@@ -82,7 +82,7 @@ En mal er en adresse der `{query}` byttes ut med søkeordet, f.eks. `https://but
 Nettleseren sender søkeordet og de valgte butikkene (med maler og selektorer, siden dataene ligger i nettleseren). Serveren svarer med en NDJSON-strøm, én linje per butikk så snart den er ferdig:
 
 - Butikkene hentes **parallelt** med **8 sekunders** timeout per butikk.
-- **robots.txt** respekteres (cachet i 1 time). Søkesider som er sperret, hentes ikke. Kan ikke robots.txt leses (nettverksfeil, 5xx eller 429), hentes ingenting, og appen prøver igjen etter ett minutt.
+- **robots.txt** respekteres etter Googles regler og RFC 9309: lengste regel vinner, Allow vinner ved likhet, `*`/`$` støttes, egen `User-agent: butikkbrowser`-gruppe går foran `*`, stier normaliseres (æ/ø/å, prosentkoding), og innhold etter 500 KiB ignoreres. Filen huskes i 24 timer. Søkesider som er sperret, hentes ikke. Kan ikke robots.txt leses (nettverksfeil, 5xx eller 429), hentes ingenting, og appen prøver igjen etter ett minutt.
 - **«Ignorer robots.txt (jeg søker selv)»** er en bryter per butikk under «Avansert» og er av som standard. robots.txt er beskjeden til roboter som går gjennom nettstedet automatisk. Med bryteren på hentes produktene likevel når du selv søker: én forespørsel per søk, som når du åpner søkesiden selv. Eksempel: Brando sperrer søk i robots.txt, men gir produkter via Shopify-API-et når bryteren er på.
 - Har butikken et **produkt-API** (se under), brukes det først. Ellers trekkes produktene ut av søkesiden med **JSON-LD** (schema.org `Product`/`ItemList`), deretter **OpenGraph**, og til slutt **CSS-selektorer** du legger inn under «Avansert» i butikkinnstillingene.
 - Resultatene **caches** kort, og det er **rate limiting** både per klient og per butikk.

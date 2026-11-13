@@ -156,8 +156,11 @@ export async function safeFetch(
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          const room = maxBytes - received;
           received += value.byteLength;
-          if (received > maxBytes) {
+          if (value.byteLength > room) {
+            // Behold innholdet opp til grensen (som Google gjør med robots.txt) og stopp
+            if (room > 0) chunks.push(value.subarray(0, room));
             await reader.cancel();
             break;
           }
