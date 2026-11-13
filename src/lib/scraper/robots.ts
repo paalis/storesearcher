@@ -1,70 +1,17 @@
 import "server-only";
 import { safeFetch } from "@/lib/server/safeFetch";
 import { TtlCache } from "./cache";
+import { isAllowed, parseRobots, ROBOTS_MAX_BYTES, type RobotsRule } from "./robotsParse";
 
-interface Rule {
-  allow: boolean;
-  pattern: string;
-}
+export { isAllowed, parseRobots } from "./robotsParse";
 
-const robotsCache = new TtlCache<Rule[]>(60 * 60 * 1000, 300);
-const AGENT_TOKEN = "butikkbrowser";
-const DISALLOW_ALL: Rule[] = [{ allow: false, pattern: "/" }];
+/** Som Google: robots.txt huskes i opptil 24 timer. */
+const ROBOTS_TTL_MS = 24 * 60 * 60 * 1000;
+/** Når robots.txt ikke kunne leses: sperr, men prøv igjen etter ett minutt. */
+const UNAVAILABLE_TTL_MS = 60 * 1000;
 
-/** Parser robots.txt og returnerer reglene som gjelder for oss (vår agent eller *). */
-export function parseRobots(text: string): Rule[] {
-  const groups: { agents: string[]; rules: Rule[] }[] = [];
-  let current: { agents: string[]; rules: Rule[] } | null = null;
-  let lastWasAgent = false;
-
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.replace(/#.*$/, "").trim();
-    const m = line.match(/^([\w-]+)\s*:\s*(.*)$/);
-    if (!m) continue;
-    const key = m[1].toLowerCase();
-    const value = m[2].trim();
-    if (key === "user-agent") {
-      if (!current || !lastWasAgent) {
-        current = { agents: [], rules: [] };
-        groups.push(current);
-      }
-      current.agents.push(value.toLowerCase());
-      lastWasAgent = true;
-    } else {
-      lastWasAgent = false;
-      if (!current) continue;
-      if (key === "allow" || key === "disallow") {
-        if (key === "disallow" && value === "") continue; // tom Disallow = alt tillatt
-        current.rules.push({ allow: key === "allow", pattern: value });
-      }
-    }
-  }
-
-  const specific = groups.filter((g) => g.agents.some((a) => a !== "*" && AGENT_TOKEN.includes(a)));
-  const chosen = specific.length ? specific : groups.filter((g) => g.agents.includes("*"));
-  return chosen.flatMap((g) => g.rules);
-}
-
-function toRegex(pattern: string): RegExp {
-  const anchored = pattern.endsWith("$");
-  const body = (anchored ? pattern.slice(0, -1) : pattern)
-    .split("*")
-    .map((p) => p.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
-    .join(".*");
-  return new RegExp("^" + body + (anchored ? "$" : ""));
-}
-
-/** Lengste treff vinner; ved likt vinner Allow (Google-semantikk). */
-export function isAllowed(rules: Rule[], pathAndQuery: string): boolean {
-  let best: Rule | null = null;
-  for (const r of rules) {
-    if (!toRegex(r.pattern).test(pathAndQuery)) continue;
-    if (!best || r.pattern.length > best.pattern.length || (r.pattern.length === best.pattern.length && r.allow)) {
-      best = r;
-    }
-  }
-  return best ? best.allow : true;
-}
+const robotsCache = new TtlCache<RobotsRule[]>(ROBOTS_TTL_MS, 300);
+const DISALLOW_ALL: RobotsRule[] = [{ allow: false, pattern: "/" }];
 
 export type RobotsVerdict = "tillatt" | "sperret" | "utilgjengelig";
 
@@ -80,7 +27,12 @@ export async function robotsVerdict(url: string, signal?: AbortSignal): Promise<
     // Som Google: 2xx = følg reglene, 4xx = ingen regler,
     // 5xx/429/nettverksfeil = alt sperret (caches kort, så vi prøver igjen snart)
     try {
-      const res = await safeFetch(`${u.origin}/robots.txt`, { timeoutMs: 3000, maxBytes: 500_000, accept: "text/plain", signal });
+      const res = await safeFetch(`${u.origin}/robots.txt`, {
+        timeoutMs: 3000,
+        maxBytes: ROBOTS_MAX_BYTES,
+        accept: "text/plain",
+        signal,
+      });
       if (res.status >= 200 && res.status < 300) rules = parseRobots(res.body);
       else if (res.status >= 400 && res.status < 500 && res.status !== 429) rules = [];
       else rules = DISALLOW_ALL;
@@ -89,7 +41,7 @@ export async function robotsVerdict(url: string, signal?: AbortSignal): Promise<
       if (signal?.aborted) throw err;
       rules = DISALLOW_ALL;
     }
-    robotsCache.set(u.origin, rules, rules === DISALLOW_ALL ? 60_000 : undefined);
+    robotsCache.set(u.origin, rules, rules === DISALLOW_ALL ? UNAVAILABLE_TTL_MS : ROBOTS_TTL_MS);
   }
   if (rules === DISALLOW_ALL) return "utilgjengelig";
   return isAllowed(rules, u.pathname + u.search) ? "tillatt" : "sperret";
