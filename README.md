@@ -97,9 +97,9 @@ Mange butikker viser søkeresultatene med JavaScript, så HTML-en inneholder ing
 | --- | --- | --- |
 | Shopify | `/search/suggest.json?q=…` | Shopify-butikker |
 | WooCommerce | `/wp-json/wc/store/v1/products?search=…` | Kleins |
-| Egendefinert JSON | Din egen URL-mal med `{query}`, pluss stier som `data.products`, `name`, `price.amount` og `images.0.url` | Butikker som bruker Algolia, Klevu o.l. |
+| Egendefinert JSON | Din egen URL-mal med `{query}`, pluss stier som `data.products`, `name`, `price.amount` og `images.0.url` | Retro (`/api/navigation/product?query=…`), Decades (Voyado Elevate: `/publicapi/esales/search?q=…`) |
 
-«Foreslå automatisk» kjenner igjen Shopify og WooCommerce og sjekker at API-et svarer. Ved feil faller appen tilbake til søkesiden. Robots.txt gjelder også API-adressene. Brando er for eksempel Shopify-butikk, men sperrer automatiske søk (`Disallow: /*?q=*`), så API-et brukes bare hvis du slår på «Ignorer robots.txt» for butikken. Volt blokkerer automatiske forespørsler med Cloudflare, og det hjelper ikke bryteren mot. Volt brukes derfor bare via «Åpne søk».
+«Foreslå automatisk» kjenner igjen Shopify og WooCommerce og sjekker at API-et svarer. Ved feil faller appen tilbake til søkesiden. Robots.txt gjelder også API-adressene. Brando er for eksempel Shopify-butikk, men sperrer automatiske søk (`Disallow: /*?q=*`), så API-et brukes bare hvis du slår på «Ignorer robots.txt» for butikken. Volt og NLY Man blokkerer automatiske forespørsler med Cloudflare, og det hjelper ikke bryteren mot. De brukes derfor bare via «Åpne søk».
 
 Finn API-et til en annen butikk slik: åpne utviklerverktøyene i nettleseren (Network-fanen), gjør et søk i butikken, og se etter et JSON-kall som inneholder søkeordet.
 

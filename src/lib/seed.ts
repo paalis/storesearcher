@@ -3,7 +3,7 @@ import type { AppData } from "./types";
 const created = "2026-11-12T00:00:00.000Z";
 
 /**
- * Eksempeldata. Søkemalene til Brando, Retro og Kleins er verifisert (nov. 2026).
+ * Eksempeldata. Søkemalene til Brando, Retro, Decades og Kleins er verifisert (nov. 2026).
  * De øvrige er beste gjetning – bruk «Test mal» i redigeringsvinduet for å bekrefte.
  */
 export const seedData: AppData = {
@@ -44,10 +44,19 @@ export const seedData: AppData = {
       url: "https://retro.no",
       searchTemplate: "https://retro.no/search?q={query}",
       categoryIds: ["cat-herre", "cat-dame", "cat-merker"],
-      note: "Retro Nordre, Trondheim.",
+      note: "Retro Nordre, Trondheim. Drupal Commerce – produkter hentes fra butikkens eget søke-API.",
       favorite: false,
       active: true,
       createdAt: created,
+      api: {
+        type: "json",
+        url: "https://retro.no/api/navigation/product?query={query}",
+        items: "result.items",
+        title: "title",
+        price: "price.value",
+        image: "image_grid_url",
+        link: "schema_metatag_url",
+      },
     },
     {
       id: "store-nlyman",
@@ -55,7 +64,7 @@ export const seedData: AppData = {
       url: "https://nlyman.com/no",
       searchTemplate: "https://nlyman.com/no/search/?q={query}",
       categoryIds: ["cat-herre"],
-      note: "Søsterbutikk av Nelly.com. Søkemal ikke verifisert.",
+      note: "Søsterbutikk av Nelly.com. Beskyttet av Cloudflare, så «Hent produkter» fungerer ikke – bruk «Åpne søk». Søkemal ikke verifisert.",
       favorite: false,
       active: true,
       createdAt: created,
@@ -64,12 +73,21 @@ export const seedData: AppData = {
       id: "store-decades",
       name: "Decades",
       url: "https://www.decades.no",
-      searchTemplate: "https://www.decades.no/search?q={query}",
+      searchTemplate: "https://www.decades.no/sokeside/?q={query}",
       categoryIds: ["cat-jeans", "cat-herre", "cat-dame"],
-      note: "Tidligere Boys of Europe. Søkemalen gir 404 – finn riktig søkeadresse og oppdater.",
+      note: "Tidligere Boys of Europe. Optimizely + Voyado Elevate – produkter hentes fra butikkens søke-API. Ukjente søkeord gir generelle treff.",
       favorite: false,
       active: true,
       createdAt: created,
+      api: {
+        type: "json",
+        url: "https://www.decades.no/publicapi/esales/search?q={query}&touchpoint=DESKTOP&skip=0&limit=24",
+        items: "primaryList.productGroups",
+        title: "products.0.title",
+        price: "products.0.sellingPrice.min",
+        image: "products.0.imageInfo.images.0.sources.0.url",
+        link: "products.0.link",
+      },
     },
     {
       id: "store-kleins",
