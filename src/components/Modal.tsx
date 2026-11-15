@@ -168,11 +168,18 @@ export function Modal({
     const d = drag.current;
     drag.current = null;
     if (!d || d.id !== e.pointerId) return;
-    const h = d.history;
+    if (e.type === "pointercancel") {
+      // Nettleseren tok over bevegelsen (f.eks. systemgest): tilbake til åpen, uten hastighet
+      springTo(0, { dampingRatio: 1, response: 0.3 });
+      return;
+    }
+    // Ta med slippunktet og bruk bare de siste 100 ms: holdes fingeren i ro før slipp,
+    // er hastigheten null – ikke hastigheten fra et tidligere kast.
+    const h = [...d.history, { t: e.timeStamp, y: e.clientY }].filter((p) => e.timeStamp - p.t <= 100);
     const first = h[0];
     const lastPt = h[h.length - 1];
     const dt = (lastPt.t - first.t) / 1000;
-    const velocity = dt > 0 ? (lastPt.y - first.y) / dt : 0; // px/s, positiv = nedover
+    const velocity = h.length > 1 && dt > 0 ? (lastPt.y - first.y) / dt : 0; // px/s, positiv = nedover
     const projected = value.current + project(velocity);
     if (d.active && projected > height() * 0.5) {
       releaseVelocity.current = velocity;
@@ -190,6 +197,7 @@ export function Modal({
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      inert={!open}
     >
       <div ref={scrim} className="absolute inset-0 bg-black/40" style={{ opacity: 0 }} onClick={() => open && closeRef.current()} />
       <div

@@ -100,6 +100,7 @@ export function StoreForm({
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!open) return; // allerede lagret – skjemaet lukkes (hindrer dobbel lagring ved dobbeltklikk)
     const url = normalizeUrl(form.url);
     if (!form.name.trim()) return setError("Gi butikken et navn.");
     if (!url) return setError("Legg inn nettadressen til butikken.");
@@ -141,6 +142,7 @@ export function StoreForm({
                 type="button"
                 className="btn-danger"
                 onClick={() => {
+                  if (!open) return;
                   actions.deleteStore(store.id);
                   close();
                 }}
