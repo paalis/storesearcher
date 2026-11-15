@@ -8,10 +8,16 @@ const KEY = "butikkbrowser:theme";
 const ORDER: Theme[] = ["system", "light", "dark"];
 const LABEL: Record<Theme, string> = { system: "Systemtema", light: "Lyst tema", dark: "Mørkt tema" };
 
-function apply(theme: Theme) {
+function apply(theme: Theme, animate = false) {
+  const root = document.documentElement;
+  // Myk overgang ved manuelt bytte (unngår brått lysstyrkehopp), men ikke ved redusert bevegelse
+  if (animate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    root.classList.add("theme-transition");
+    window.setTimeout(() => root.classList.remove("theme-transition"), 300);
+  }
   const dark =
     theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.classList.toggle("dark", dark);
+  root.classList.toggle("dark", dark);
 }
 
 function readTheme(): Theme {
@@ -33,7 +39,7 @@ export function ThemeToggle() {
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => theme === "system" && apply("system");
+    const onChange = () => theme === "system" && apply("system", true);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, [theme]);
@@ -44,7 +50,7 @@ export function ThemeToggle() {
     try {
       localStorage.setItem(KEY, next);
     } catch {}
-    apply(next);
+    apply(next, true);
   }
 
   const Icon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
@@ -52,7 +58,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={cycle}
-      className="btn-ghost size-9 p-0"
+      className="btn-ghost size-9 p-0 pointer-coarse:size-11"
       aria-label={`${LABEL[theme]} – klikk for å bytte`}
       title={LABEL[theme]}
     >
