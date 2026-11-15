@@ -261,8 +261,9 @@ export function ProductResults({ query, stores }: { query: string; stores: Store
 
 function ProductCard({ product, store }: { product: Row; store: Store }) {
   const [imgFailed, setImgFailed] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   return (
-    <li className="card group flex flex-col overflow-hidden">
+    <li className="card group flex flex-col overflow-hidden transition-transform duration-100 motion-safe:active:scale-[0.98]">
       <a href={product.url} target="_blank" rel="noopener noreferrer" className="flex flex-1 flex-col">
         <div className="relative aspect-square bg-white">
           {product.image && !imgFailed ? (
@@ -273,7 +274,10 @@ function ProductCard({ product, store }: { product: Row; store: Store }) {
               loading="lazy"
               referrerPolicy="no-referrer"
               onError={() => setImgFailed(true)}
-              className="size-full object-contain p-2 transition-transform group-hover:scale-[1.03]"
+              onLoad={() => setImgLoaded(true)}
+              className={`size-full object-contain p-2 transition-[opacity,transform] duration-300 ease-out motion-safe:group-hover:scale-[1.03] ${
+                imgLoaded ? "opacity-100" : "opacity-0"
+              }`}
             />
           ) : (
             <div className="grid size-full place-items-center bg-surface-2 text-muted">

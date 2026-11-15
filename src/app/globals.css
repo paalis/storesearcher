@@ -41,8 +41,17 @@
   --color-accent-fg: var(--accent-fg);
   --color-accent-soft: var(--accent-soft);
   --color-danger: var(--danger);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+}
+
+/* Typografi: systemfonten har optisk størrelse og sperring innebygd.
+   Sperring er størrelsesavhengig: litt luft på liten tekst, tettere på store titler. */
+@theme {
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --text-xs--letter-spacing: 0.01em;
+  --text-lg--letter-spacing: -0.01em;
+  --text-2xl--letter-spacing: -0.02em;
+  --text-2xl--line-height: 1.15;
 }
 
 html,
@@ -53,11 +62,26 @@ body {
 
 body {
   -webkit-tap-highlight-color: transparent;
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
 }
 
 /* Felles komponentklasser */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+  /* Respons på trykk (ikke slipp), ingen 300 ms trykkforsinkelse, 44 px trykkflate på berøringsskjerm */
+  @apply inline-flex touch-manipulation select-none items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-[transform,background-color,color,opacity] duration-100 ease-out motion-safe:active:scale-[0.97] pointer-coarse:min-h-11 disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+}
+
+/* Gjennomsiktig materiale for flytende menyer: innholdet skimtes under */
+@utility material {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+@utility material-bg {
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
 }
 @utility btn-primary {
   @apply btn bg-accent text-accent-fg hover:opacity-90;
@@ -86,4 +110,64 @@ body {
 
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Toppfeltet: ingen hard skillelinje før innhold faktisk ligger under det */
+.scroll-edge {
+  border-bottom: 1px solid transparent;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.scroll-edge[data-scrolled="true"] {
+  border-bottom-color: color-mix(in srgb, var(--border) 70%, transparent);
+  box-shadow: 0 6px 16px -12px rgb(0 0 0 / 0.25);
+}
+
+/* Myk overgang ved bytte mellom lyst og mørkt tema (unngår brå lysstyrkehopp) */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease, fill 250ms ease !important;
+}
+
+/* Redusert bevegelse: ingen pulserende plassholdere eller jevn rulling */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-pulse {
+    animation: none;
+  }
+}
+
+/* Redusert gjennomsiktighet: materialene blir helt dekkende */
+@media (prefers-reduced-transparency: reduce) {
+  .material {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .material-bg {
+    background: var(--bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Økt kontrast: dekkende flater og tydelige kanter */
+@media (prefers-contrast: more) {
+  :root {
+    --border: #6b6b78;
+    --muted: #45454f;
+  }
+  .dark {
+    --border: #9a9aa8;
+    --muted: #c4c4cf;
+  }
+  .material,
+  .material-bg {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }

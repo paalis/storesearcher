@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Search, Store, Tags, Settings, ShoppingBag } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -41,6 +41,22 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [router]);
 
+  // iOS Safari viser bare :active-tilstand når en touchstart-lytter finnes
+  useEffect(() => {
+    const noop = () => {};
+    document.addEventListener("touchstart", noop, { passive: true });
+    return () => document.removeEventListener("touchstart", noop);
+  }, []);
+
+  // Skillelinje under toppfeltet bare når innhold ligger under det
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 2);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   // Service worker for PWA (kun i produksjon)
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
@@ -51,7 +67,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
+      <header className="material-bg scroll-edge sticky top-0 z-30" data-scrolled={scrolled}>
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
             <span className="grid size-8 place-items-center rounded-lg bg-accent text-accent-fg">
@@ -64,7 +80,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={href}
                 href={href}
-                className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                className={`rounded-lg px-3 py-1.5 text-sm transition-[color,background-color,transform] duration-100 motion-safe:active:scale-[0.97] ${
                   isActive(href) ? "bg-surface-2 font-medium text-fg" : "text-muted hover:text-fg"
                 }`}
               >
@@ -84,13 +100,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-28 md:pb-12">{children}</main>
 
       {/* Bunnmeny på mobil */}
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur md:hidden">
+      <nav className="material pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-border/60 md:hidden">
         <div className="mx-auto grid max-w-md grid-cols-4">
           {NAV.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] ${
+              className={`flex touch-manipulation flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-[color,transform] duration-100 motion-safe:active:scale-95 ${
                 isActive(href) ? "text-accent" : "text-muted"
               }`}
             >

@@ -111,10 +111,10 @@ function CategoryRow({ category, count, first, last }: { category: Category; cou
   return (
     <li className="flex items-center gap-2 px-4 py-3">
       <div className="flex flex-col">
-        <button className="btn-ghost size-6 p-0" disabled={first} onClick={() => actions.moveCategory(category.id, -1)} aria-label="Flytt opp">
+        <button className="btn-ghost size-6 p-0 pointer-coarse:size-10 pointer-coarse:min-h-10" disabled={first} onClick={() => actions.moveCategory(category.id, -1)} aria-label="Flytt opp">
           <ArrowUp className="size-3.5" />
         </button>
-        <button className="btn-ghost size-6 p-0" disabled={last} onClick={() => actions.moveCategory(category.id, 1)} aria-label="Flytt ned">
+        <button className="btn-ghost size-6 p-0 pointer-coarse:size-10 pointer-coarse:min-h-10" disabled={last} onClick={() => actions.moveCategory(category.id, 1)} aria-label="Flytt ned">
           <ArrowDown className="size-3.5" />
         </button>
       </div>
@@ -132,10 +132,10 @@ function CategoryRow({ category, count, first, last }: { category: Category; cou
           </>
         ) : (
           <>
-            <button className="btn-ghost size-9 p-0" onClick={() => setEditing(true)} aria-label={`Endre ${category.name}`}>
+            <button className="btn-ghost size-9 p-0 pointer-coarse:size-11" onClick={() => setEditing(true)} aria-label={`Endre ${category.name}`}>
               <Pencil className="size-4" />
             </button>
-            <button className="btn-ghost size-9 p-0 hover:text-danger" onClick={() => setConfirm(true)} aria-label={`Slett ${category.name}`}>
+            <button className="btn-ghost size-9 p-0 pointer-coarse:size-11 hover:text-danger" onClick={() => setConfirm(true)} aria-label={`Slett ${category.name}`}>
               <Trash2 className="size-4" />
             </button>
           </>

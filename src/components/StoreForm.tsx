@@ -54,6 +54,9 @@ export function StoreForm({
     Boolean(store?.api || store?.ignoreRobots || (store?.selectors && Object.values(store.selectors).some(Boolean))),
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Lukking går via modalens utgangsanimasjon; forelderen avmonterer i onExited
+  const [open, setOpen] = useState(true);
+  const close = () => setOpen(false);
 
   const set = <K extends keyof StoreInput>(key: K, value: StoreInput[K]) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -97,6 +100,7 @@ export function StoreForm({
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!open) return; // allerede lagret – skjemaet lukkes (hindrer dobbel lagring ved dobbeltklikk)
     const url = normalizeUrl(form.url);
     if (!form.name.trim()) return setError("Gi butikken et navn.");
     if (!url) return setError("Legg inn nettadressen til butikken.");
@@ -119,15 +123,16 @@ export function StoreForm({
     };
     if (store) actions.updateStore(store.id, clean);
     else actions.addStore(clean);
-    onClose();
+    close();
   }
 
   const templateOk = form.searchTemplate === "" || isValidTemplate(form.searchTemplate);
 
   return (
     <Modal
-      open
-      onClose={onClose}
+      open={open}
+      onClose={close}
+      onExited={onClose}
       title={store ? "Rediger butikk" : "Legg til butikk"}
       footer={
         <div className="flex items-center gap-2">
@@ -137,8 +142,9 @@ export function StoreForm({
                 type="button"
                 className="btn-danger"
                 onClick={() => {
+                  if (!open) return;
                   actions.deleteStore(store.id);
-                  onClose();
+                  close();
                 }}
               >
                 <Trash2 className="size-4" /> Bekreft sletting
@@ -149,7 +155,7 @@ export function StoreForm({
               </button>
             ))}
           <div className="ml-auto flex gap-2">
-            <button type="button" className="btn-secondary" onClick={onClose}>
+            <button type="button" className="btn-secondary" onClick={close}>
               Avbryt
             </button>
             <button type="submit" form="store-form" className="btn-primary">

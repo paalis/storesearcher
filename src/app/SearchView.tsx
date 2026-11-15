@@ -126,7 +126,7 @@ export function SearchView() {
   return (
     <>
       {/* Søkefelt */}
-      <form onSubmit={submit} role="search" className="sticky top-14 z-20 -mx-4 bg-bg/90 px-4 pt-1 pb-3 backdrop-blur">
+      <form onSubmit={submit} role="search" className="material-bg sticky top-14 z-20 -mx-4 px-4 pt-1 pb-3">
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted" />
           <input
@@ -145,7 +145,7 @@ export function SearchView() {
             {draft && (
               <button
                 type="button"
-                className="btn-ghost size-8 p-0"
+                className="btn-ghost size-8 p-0 pointer-coarse:size-10 pointer-coarse:min-h-10"
                 aria-label="Tøm søk"
                 onClick={() => {
                   setDraft("");
