@@ -72,7 +72,7 @@ export function CategoryChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex items-center rounded-full border font-medium transition-colors ${base} ${
+      className={`inline-flex touch-manipulation select-none items-center rounded-full border font-medium transition-[color,background-color,box-shadow,transform] duration-100 motion-safe:active:scale-95 pointer-coarse:min-h-10 ${base} ${
         active ? `${c.chip} border-transparent ring-2 ring-accent/60` : "border-border bg-surface text-muted hover:text-fg"
       }`}
     >
